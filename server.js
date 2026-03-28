@@ -24,6 +24,13 @@ app.use("/api", limiter);
 // Routes
 app.use("/api", authRoutes);
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server is running"
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
