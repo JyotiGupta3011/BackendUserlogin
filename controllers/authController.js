@@ -4,6 +4,13 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const sendOTP = require("../utils/sendOTP");
 
+const generateToken = (userId) =>
+  jwt.sign(
+    { id: userId },
+    process.env.JWT_SECRET || "secret",
+    { expiresIn: "1d" }
+  );
+
 // 1. Register - Now sets isVerified to true by default for ease of use
 exports.register = async (req, res) => {
   try {
@@ -91,13 +98,13 @@ exports.loginPassword = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ message: "Invalid password" });
 
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET || "secret",
-      { expiresIn: "1d" }
-    );
+    const token = generateToken(user._id);
 
-    res.json({ token, user: { name: user.name, email: user.email } });
+    res.json({
+      message: "Login successful",
+      token,
+      user: { name: user.name, email: user.email }
+    });
   } catch (error) {
     res.status(500).json({ message: "Login error", error: error.message });
   }
@@ -133,7 +140,11 @@ exports.verifyLoginOTP = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "1d" });
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    const token = generateToken(user._id);
     res.json({ message: "Login successful", token, user: { email: user.email, name: user.name } });
   } catch (error) {
     res.status(500).json({ message: "Verification error", error: error.message });
